@@ -203,6 +203,7 @@ void LeddyNode::tick(void)
   }
   else
   {
+    // Detach and send state when we're done stepping
     _ticker.detach();
     sendState();
   }
@@ -224,11 +225,11 @@ void LeddyNode::setup()
   {
     pinMode(_ledPin, OUTPUT);
   }
-
   if (_relayPin > DEFAULTPIN)
   {
     pinMode(_relayPin, OUTPUT);
   }
+  setRelay(false);
 }
 
 void LeddyNode::loop()
