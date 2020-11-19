@@ -2,8 +2,7 @@
 /*
  * LeddyNode.cpp
  * Homie Node for an aquarium light with three colors + off
- *
- * Version: 1.0
+ * 
  * Author: Lübbe Onken (http://github.com/luebbe)
  */
 
@@ -28,12 +27,15 @@ private:
 
   const char *cCaption = "• Leddy:";
   const char *cIndent = "  ◦ ";
+  const char *cOnTopic = "on";
+  const char *cStateTopic = "state";
 
   Ticker _ticker;
 
   int _relayPin;
   int _ledPin;
 
+  STATE _lastState = STATE::OFF;
   STATE _currentState = STATE::OFF;
   int _ticks;
 
@@ -56,7 +58,6 @@ protected:
   virtual bool handleInput(const HomieRange &range, const String &property, const String &value) override;
   virtual void onReadyToOperate() override;
   virtual void setup() override;
-  virtual void loop() override;
 
 public:
   explicit LeddyNode(const char *name, const int relayPin = DEFAULTPIN, const int ledPin = DEFAULTPIN);

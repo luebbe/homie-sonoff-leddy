@@ -2,12 +2,11 @@
  * Firmware for a Sonoff S20 to control an aquarium light
  * with three colors + off
  *
- * Version: 1.0
  * Author: Lübbe Onken (http://github.com/luebbe)
  */
 
 #define FW_NAME "sonoff-s20-leddy"
-#define FW_VERSION "1.0.0"
+#define FW_VERSION "1.0.1"
 
 #include <Homie.hpp>
 #include "ButtonNode.hpp"
@@ -38,7 +37,6 @@ void setup()
   pinMode(PIN_BUTTON, INPUT_PULLUP);
 
   Homie.disableResetTrigger();
-  // Homie.disableLedFeedback();
   Homie.setLedPin(PIN_GREEN_LED, LOW);
 
   Homie.setup();

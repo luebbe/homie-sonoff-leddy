@@ -14,7 +14,11 @@ LeddyNode::LeddyNode(const char *name, const int relayPin, const int ledPin)
   _relayPin = relayPin;
   _ledPin = ledPin;
 
-  advertise("state")
+  advertise(cOnTopic)
+      .setDatatype("boolean")
+      .settable();
+
+  advertise(cStateTopic)
       .setDatatype("enum")
       .setFormat("off,sunny,sunnyblue,blue,step")
       .settable();
@@ -22,14 +26,32 @@ LeddyNode::LeddyNode(const char *name, const int relayPin, const int ledPin)
 
 bool LeddyNode::handleInput(const HomieRange &range, const String &property, const String &value)
 {
-  if (property.equals("state"))
+#ifdef DEBUG
+  Homie.getLogger() << "Message: " << property << " " << value << endl;
+#endif
+  if (property.equals(cOnTopic))
   {
-    if (value == "off")
+    if (value == "true")
+    {
+      if (_lastState == STATE::OFF)
+      {
+        setState(STATE::SUNNY);
+      }
+      else
+      {
+        setState(_lastState);
+      }
+      return true;
+    }
+    if (value == "false")
     {
       setState(STATE::OFF);
       return true;
     }
-    else if (value == "sunny")
+  }
+  else if (property.equals(cStateTopic))
+  {
+    if (value == "sunny")
     {
       setState(STATE::SUNNY);
       return true;
@@ -49,15 +71,8 @@ bool LeddyNode::handleInput(const HomieRange &range, const String &property, con
       step();
       return true;
     }
-    else
-    {
-      return false;
-    }
   }
-  else
-  {
-    return false;
-  }
+  return false;
 }
 
 void LeddyNode::step()
@@ -109,12 +124,16 @@ String LeddyNode::getStateName(STATE state)
 
 void LeddyNode::sendState()
 {
-  printCaption();
+  bool on = getRelay();
   String state = getStateName(_currentState);
-  Homie.getLogger() << cIndent << " State " << state << endl;
+
+  printCaption();
+  Homie.getLogger() << cIndent << "is " << (on ? "on" : "off") << endl;
+  Homie.getLogger() << cIndent << "state " << state << endl;
   if (Homie.isConnected())
   {
-    setProperty("state").send(state);
+    setProperty(cOnTopic).send(on ? "true" : "false");
+    setProperty(cStateTopic).send(state);
   }
 }
 
@@ -175,6 +194,7 @@ void LeddyNode::setState(STATE state)
     Homie.getLogger() << "State: " << getStateName(_currentState) << " -> " << getStateName(state) << " Ticks: " << _ticks << endl;
 #endif
 
+    _lastState = _currentState;
     _currentState = state;
 
     if (state == STATE::OFF)
@@ -229,9 +249,4 @@ void LeddyNode::setup()
   {
     pinMode(_relayPin, OUTPUT);
   }
-  setRelay(false);
-}
-
-void LeddyNode::loop()
-{
 }
