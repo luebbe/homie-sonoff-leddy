@@ -20,7 +20,7 @@ LeddyNode::LeddyNode(const char *name, const int relayPin, const int ledPin)
 
   advertise(cStateTopic)
       .setDatatype("enum")
-      .setFormat("off,sunny,sunnyblue,blue,step")
+      .setFormat("off,sunny,sunnyblue,blue,step,reset")
       .settable();
 }
 
@@ -71,6 +71,11 @@ bool LeddyNode::handleInput(const HomieRange &range, const String &property, con
       step();
       return true;
     }
+    else if (value == "reset")
+    {
+      reset();
+      return true;
+    }
   }
   return false;
 }
@@ -92,6 +97,22 @@ void LeddyNode::step()
     setState(STATE::OFF);
     break;
   }
+}
+
+void LeddyNode::unblockStateChange()
+{
+  _stateChangeBlocked = false;
+  Homie.getLogger() << F("State changes unblocked") << endl;
+}
+
+void LeddyNode::reset()
+{
+  Homie.getLogger() << F("Resetting") << endl;
+  setState(STATE::OFF);
+  Homie.getLogger() << F("State changes blocked for 10 seconds") << endl;
+  // Block state changes for 10 seconds
+  _stateChangeBlocked = true;
+  _ticker.once_ms(10000, std::bind(&LeddyNode::unblockStateChange, this));
 }
 
 void LeddyNode::onReadyToOperate()
@@ -177,6 +198,12 @@ void LeddyNode::setRelay(bool on)
 
 void LeddyNode::setState(STATE state)
 {
+  if (_stateChangeBlocked)
+  {
+    Homie.getLogger() << F("State changes blocked") << endl;
+    return;
+  }
+
   if (_currentState != state)
   {
     if (_currentState == STATE::OFF)

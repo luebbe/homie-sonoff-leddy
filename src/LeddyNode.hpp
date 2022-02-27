@@ -35,6 +35,7 @@ private:
   int _relayPin;
   int _ledPin;
 
+  bool _stateChangeBlocked = false;
   STATE _lastState = STATE::OFF;
   STATE _currentState = STATE::OFF;
   int _ticks;
@@ -53,6 +54,7 @@ private:
   void setState(STATE state);
 
   void tick(void);
+  void unblockStateChange();
 
 protected:
   virtual bool handleInput(const HomieRange &range, const String &property, const String &value) override;
@@ -61,5 +63,6 @@ protected:
 
 public:
   explicit LeddyNode(const char *name, const int relayPin = DEFAULTPIN, const int ledPin = DEFAULTPIN);
+  void reset(); // resets the internal state in case it is out of sync with the real state
   void step();
 };
