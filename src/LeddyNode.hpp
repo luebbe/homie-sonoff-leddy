@@ -36,7 +36,6 @@ private:
   int _ledPin;
 
   bool _stateChangeBlocked = false;
-  STATE _lastState = STATE::OFF;
   STATE _currentState = STATE::OFF;
   int _ticks;
 
@@ -51,7 +50,7 @@ private:
   void toggleRelay();
 
   void setLed(bool on);
-  void setState(STATE state);
+  bool setState(STATE state);
 
   void tick(void);
   void unblockStateChange();
@@ -63,6 +62,6 @@ protected:
 
 public:
   explicit LeddyNode(const char *name, const int relayPin = DEFAULTPIN, const int ledPin = DEFAULTPIN);
-  void reset(); // resets the internal state in case it is out of sync with the real state
-  void step();
+  bool reset(); // resets the internal state in case it is out of sync with the real state
+  bool step();
 };

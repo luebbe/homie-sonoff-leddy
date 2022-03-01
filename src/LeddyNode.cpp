@@ -20,7 +20,7 @@ LeddyNode::LeddyNode(const char *name, const int relayPin, const int ledPin)
 
   advertise(cStateTopic)
       .setDatatype("enum")
-      .setFormat("off,sunny,sunnyblue,blue,step,reset")
+      .setFormat("off,sunny,sunnyblue,blue,step")
       .settable();
 }
 
@@ -33,69 +33,47 @@ bool LeddyNode::handleInput(const HomieRange &range, const String &property, con
   {
     if (value == "true")
     {
-      if (_lastState == STATE::OFF)
-      {
-        setState(STATE::SUNNY);
-      }
-      else
-      {
-        setState(_lastState);
-      }
-      return true;
+      return setState(STATE::SUNNY);
     }
-    if (value == "false")
+    else if (value == "false")
     {
-      setState(STATE::OFF);
-      return true;
+      return reset();
     }
   }
   else if (property.equals(cStateTopic))
   {
     if (value == "sunny")
     {
-      setState(STATE::SUNNY);
-      return true;
+      return setState(STATE::SUNNY);
     }
     else if (value == "sunnyblue")
     {
-      setState(STATE::SUNNYBLUE);
-      return true;
+      return setState(STATE::SUNNYBLUE);
     }
     else if (value == "blue")
     {
-      setState(STATE::BLUE);
-      return true;
+      return setState(STATE::BLUE);
     }
     else if (value == "step")
     {
-      step();
-      return true;
-    }
-    else if (value == "reset")
-    {
-      reset();
-      return true;
+      return step();
     }
   }
   return false;
 }
 
-void LeddyNode::step()
+bool LeddyNode::step()
 {
   switch (_currentState)
   {
   case STATE::OFF:
-    setState(STATE::SUNNY);
-    break;
+    return setState(STATE::SUNNY);
   case STATE::SUNNY:
-    setState(STATE::SUNNYBLUE);
-    break;
+    return setState(STATE::SUNNYBLUE);
   case STATE::SUNNYBLUE:
-    setState(STATE::BLUE);
-    break;
+    return setState(STATE::BLUE);
   default:
-    setState(STATE::OFF);
-    break;
+    return setState(STATE::OFF);
   }
 }
 
@@ -105,14 +83,17 @@ void LeddyNode::unblockStateChange()
   Homie.getLogger() << F("State changes unblocked") << endl;
 }
 
-void LeddyNode::reset()
+bool LeddyNode::reset()
 {
   Homie.getLogger() << F("Resetting") << endl;
-  setState(STATE::OFF);
+  bool result = setState(STATE::OFF);
   Homie.getLogger() << F("State changes blocked for 10 seconds") << endl;
+
   // Block state changes for 10 seconds
   _stateChangeBlocked = true;
   _ticker.once_ms(10000, std::bind(&LeddyNode::unblockStateChange, this));
+
+  return result;
 }
 
 void LeddyNode::onReadyToOperate()
@@ -196,12 +177,12 @@ void LeddyNode::setRelay(bool on)
   setLed(on);
 }
 
-void LeddyNode::setState(STATE state)
+bool LeddyNode::setState(STATE state)
 {
   if (_stateChangeBlocked)
   {
     Homie.getLogger() << F("State changes blocked") << endl;
-    return;
+    return false;
   }
 
   if (_currentState != state)
@@ -221,7 +202,6 @@ void LeddyNode::setState(STATE state)
     Homie.getLogger() << "State: " << getStateName(_currentState) << " -> " << getStateName(state) << " Ticks: " << _ticks << endl;
 #endif
 
-    _lastState = _currentState;
     _currentState = state;
 
     if (state == STATE::OFF)
@@ -235,6 +215,7 @@ void LeddyNode::setState(STATE state)
       _ticker.attach_ms(200, std::bind(&LeddyNode::tick, this));
     }
   }
+  return true;
 }
 
 void LeddyNode::tick(void)
