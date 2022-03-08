@@ -42,7 +42,11 @@ bool LeddyNode::handleInput(const HomieRange &range, const String &property, con
   }
   else if (property.equals(cStateTopic))
   {
-    if (value == "sunny")
+    if (value == "off")
+    {
+      return reset();
+    }
+    else if (value == "sunny")
     {
       return setState(STATE::SUNNY);
     }
@@ -85,15 +89,17 @@ void LeddyNode::unblockStateChange()
 
 bool LeddyNode::reset()
 {
-  Homie.getLogger() << F("Resetting") << endl;
-  bool result = setState(STATE::OFF);
-  Homie.getLogger() << F("State changes blocked for 10 seconds") << endl;
+  Homie.getLogger() << F("Resetting") << endl
+                    << F("State changes blocked for 10 seconds") << endl;
+  _currentState = STATE::OFF;
+  setRelay(false);
+  sendState();
 
   // Block state changes for 10 seconds
   _stateChangeBlocked = true;
   _ticker.once_ms(10000, std::bind(&LeddyNode::unblockStateChange, this));
 
-  return result;
+  return true;
 }
 
 void LeddyNode::onReadyToOperate()
