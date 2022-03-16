@@ -21,7 +21,7 @@ using pb::PushButton;
 
 PushButton button(PIN_BUTTON);
 
-LeddyNode leddyNode("leddy", PIN_RELAY);
+LeddyNode leddyNode("leddy", PIN_RELAY, PIN_GREEN_LED);
 
 //################################################
 
@@ -54,7 +54,7 @@ void loop()
   case PushButton::Event::LONG_PRESS:
   case PushButton::Event::LONG_HOLD:
   case PushButton::Event::INVALID:
-    leddyNode.reset();
+    leddyNode.setState(LeddyNode::STATE::OFF);
     break;
   default:
     break;

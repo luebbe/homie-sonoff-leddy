@@ -33,73 +33,59 @@ bool LeddyNode::handleInput(const HomieRange &range, const String &property, con
   {
     if (value == "true")
     {
-      return setState(STATE::SUNNY);
+      _nextState = STATE::SUNNY;
     }
     else if (value == "false")
     {
-      return reset();
+      _nextState = STATE::OFF;
     }
+    return true;
   }
   else if (property.equals(cStateTopic))
   {
     if (value == "off")
     {
-      return reset();
+      _nextState = STATE::OFF;
     }
     else if (value == "sunny")
     {
-      return setState(STATE::SUNNY);
+      _nextState = STATE::SUNNY;
     }
     else if (value == "sunnyblue")
     {
-      return setState(STATE::SUNNYBLUE);
+      _nextState = STATE::SUNNYBLUE;
     }
     else if (value == "blue")
     {
-      return setState(STATE::BLUE);
+      _nextState = STATE::BLUE;
     }
     else if (value == "step")
     {
-      return step();
+      step();
     }
+    return true;
   }
   return false;
 }
 
-bool LeddyNode::step()
+void LeddyNode::step()
 {
   switch (_currentState)
   {
   case STATE::OFF:
-    return setState(STATE::SUNNY);
+    _nextState = STATE::SUNNY;
+    break;
   case STATE::SUNNY:
-    return setState(STATE::SUNNYBLUE);
+    _nextState = STATE::SUNNYBLUE;
+    break;
   case STATE::SUNNYBLUE:
-    return setState(STATE::BLUE);
+    _nextState = STATE::BLUE;
+    break;
   default:
-    return setState(STATE::OFF);
+    _nextState = STATE::OFF;
+    break;
   }
-}
-
-void LeddyNode::unblockStateChange()
-{
-  _stateChangeBlocked = false;
-  Homie.getLogger() << F("State changes unblocked") << endl;
-}
-
-bool LeddyNode::reset()
-{
-  Homie.getLogger() << F("Resetting") << endl
-                    << F("State changes blocked for 10 seconds") << endl;
-  _currentState = STATE::OFF;
-  setRelay(false);
-  sendState();
-
-  // Block state changes for 10 seconds
-  _stateChangeBlocked = true;
-  _ticker.once_ms(10000, std::bind(&LeddyNode::unblockStateChange, this));
-
-  return true;
+  Homie.getLogger() << "State: " << getStateName(_currentState) << "->" << getStateName(_nextState) << endl;
 }
 
 void LeddyNode::onReadyToOperate()
@@ -179,19 +165,29 @@ void LeddyNode::setRelay(bool on)
   {
     digitalWrite(_relayPin, on ? HIGH : LOW);
   }
-  // Set Led according to relay
-  setLed(on);
 }
 
-bool LeddyNode::setState(STATE state)
+void LeddyNode::setState(STATE state)
 {
   if (_stateChangeBlocked)
   {
     Homie.getLogger() << F("State changes blocked") << endl;
-    return false;
+    return;
   }
 
-  if (_currentState != state)
+  if (state == STATE::OFF)
+  {
+    Homie.getLogger() << F("Turning OFF") << endl
+                      << F("State changes blocked for 10 seconds") << endl;
+    // Block state changes for 10 seconds, turn on LED while blocked
+    setLed(true);
+    setRelay(false);
+    _currentState = STATE::OFF;
+    _stateChangeBlocked = true;
+    _ticker.once_ms(10000, std::bind(&LeddyNode::unblockStateChange, this));
+    sendState();
+  }
+  else if (_currentState != state)
   {
     if (_currentState == STATE::OFF)
     {
@@ -209,19 +205,8 @@ bool LeddyNode::setState(STATE state)
 #endif
 
     _currentState = state;
-
-    if (state == STATE::OFF)
-    {
-      // turn relay off immediately
-      setRelay(false);
-      sendState();
-    }
-    else
-    {
-      _ticker.attach_ms(200, std::bind(&LeddyNode::tick, this));
-    }
+    _ticker.attach_ms(200, std::bind(&LeddyNode::tick, this));
   }
-  return true;
 }
 
 void LeddyNode::tick(void)
@@ -243,9 +228,24 @@ void LeddyNode::tick(void)
   }
 }
 
+void LeddyNode::unblockStateChange()
+{
+  setLed(false);
+  _stateChangeBlocked = false;
+  Homie.getLogger() << F("State changes unblocked") << endl;
+}
+
 void LeddyNode::toggleRelay()
 {
   setRelay(!getRelay());
+}
+
+void LeddyNode::loop()
+{
+  if (!_stateChangeBlocked && (_nextState != _currentState))
+  {
+    setState(_nextState);
+  }
 }
 
 void LeddyNode::setup()
