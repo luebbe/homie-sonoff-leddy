@@ -90,8 +90,7 @@ void LeddyNode::step()
 
 void LeddyNode::onReadyToOperate()
 {
-  setRelay(false);
-  sendState();
+  setState(STATE::OFF);
 };
 
 void LeddyNode::printCaption()
